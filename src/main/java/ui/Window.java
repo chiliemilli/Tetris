@@ -2,17 +2,18 @@ package ui;
 
 import model.Coord;
 import model.Figure;
-
+import model.Mappable;
+import service.FlyFigure;
 import javax.swing.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
-public class Window extends JFrame implements Runnable{
+public class Window extends JFrame implements Runnable, Mappable {
 
     private Box[][] boxes;
-    private Figure figure; //active figure
-    private Coord coord;
-
+    private FlyFigure fly;
 
     public Window(){
 
@@ -20,17 +21,27 @@ public class Window extends JFrame implements Runnable{
         initForm();
         initBoxes();
         addKeyListener(new KeyAdapter());
+        TimeAdapter timeAdapter=new TimeAdapter();
+        Timer timer=new Timer(200,timeAdapter);
+        timer.start();
     }
 
     public void addFigure(){
-        figure=Figure.getRandom();
-        coord=new Coord(5,5);
-        showFigure();
+        fly=new FlyFigure(this);
+        if (fly.canPlaceFigure()){
+            showFigure();
+
+        }else {
+            setVisible(false);
+            dispose();
+            return;
+        }
+
     }
 
     private  void initForm(){
         setSize(Config.WIDTH * Config.SIZE + 15 ,
-                Config.HEIGHT*Config.SIZE + 30);
+                Config.HEIGHT*Config.SIZE + 40);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setTitle("Tetris");
         setLocationRelativeTo(null);
@@ -47,23 +58,23 @@ public class Window extends JFrame implements Runnable{
         }
     }
 
-    @Override
+
     public void run() {
         repaint();
     }
 
-    private void showFigure(Figure figure, Coord at, int color){
-        for(Coord dot: figure.dots){
-            setBoxColor(at.x+dot.x, at.y+dot.y,  color);
-        }
-    }
-
     private void showFigure(){
-        showFigure(figure,coord,1);
+        showFigure(1);
     }
 
     private void hideFigure(){
-        showFigure(figure,coord,0);
+        showFigure(0);
+    }
+
+    private void showFigure(int color){
+        for(Coord dot: fly.getFigure().dots){
+            setBoxColor(fly.getCoord().x+dot.x, fly.getCoord().y+dot.y,  color);
+        }
     }
 
 
@@ -72,6 +83,23 @@ public class Window extends JFrame implements Runnable{
         if (y<0 || y>=Config.HEIGHT) return;
         boxes[x][y].setColor(color);
 
+    }
+    public int getBoxColor(int x, int y){
+        if (x<0 || x>=Config.WIDTH) return -1;
+        if (y<0 || y>=Config.HEIGHT) return -1;
+        return boxes[x][y].getColor();
+    }
+
+    private void moveFly(int sx, int sy){
+        hideFigure();
+        fly.moveFigure(sx,sy);
+        showFigure();
+    }
+
+    private void turnFly(int direction){
+        hideFigure();
+        fly.turnFigure(direction);
+        showFigure();
     }
 
     class KeyAdapter implements KeyListener{
@@ -82,13 +110,64 @@ public class Window extends JFrame implements Runnable{
 
         @Override
         public void keyPressed(KeyEvent e) {
-            showFigure(Figure.Z1, new Coord(5,5), 0);
-            showFigure(Figure.Z1, new Coord(4,5), 1);
+            hideFigure();
+            switch (e.getKeyCode()){
+                case KeyEvent.VK_LEFT: moveFly(-1, 0); break;
+                case KeyEvent.VK_RIGHT: moveFly(+1,0); break;
+                case KeyEvent.VK_UP: turnFly(2); break;
+                case KeyEvent.VK_DOWN: turnFly(1); break;
+                case KeyEvent.VK_U: moveFly(0,-1); break;
+            }
+            showFigure();
+
         }
 
         @Override
         public void keyReleased(KeyEvent e) {
 
+        }
+    }
+
+    private void stripLines(){
+        for (int y=Config.HEIGHT-1;y>=0;y--){
+            while (isFullLine(y)){
+                dropLine(y);
+            }
+        }
+    }
+
+    private void dropLine(int y){
+        for (int my=y-1;my>=0;my--){
+            for (int x=0;x<Config.WIDTH; x++){
+                setBoxColor(x,my+1,getBoxColor(x,my));
+            }
+        }
+        for (int x=0;x<Config.WIDTH; x++){
+            setBoxColor(x,0,0);
+        }
+    }
+
+    private boolean isFullLine(int y){
+
+        for (int x=0;x<Config.WIDTH; x++){
+            if (getBoxColor(x,y)!=2){
+                return false;
+            }
+        }
+        return  true;
+    }
+
+
+
+    class TimeAdapter implements ActionListener{
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            moveFly(0,1);
+            if (fly.isLanded()){
+                showFigure(2);//
+                stripLines();
+                addFigure();
+            }
         }
     }
 }

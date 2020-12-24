@@ -70,14 +70,20 @@ public enum Figure {
             1,2);
 
     public final List<Coord> dots;
+    public final Coord top;
+    public final Coord bottom;
 
     Figure(int ... coords){
         dots=new ArrayList<Coord>();
         for (int i = 0; i <coords.length ; i+=2) {
             dots.add(new Coord(coords[i], coords[i+1]));
-
         }
+        top=setTop();
+        bottom=setBottom();
+
     }
+
+
     public Figure turnRight(){
         switch (this){
             case I1: return I2;
@@ -104,11 +110,43 @@ public enum Figure {
     }
 
     public Figure turnLeft(){
+
         return turnRight().turnRight().turnRight(); //чтобы повернуть налево, повернуть три раза направо
     }
 
-    public  static Figure getRandom(){
-        return Figure.values()[(int) Math.random()*Figure.values().length];
+    private Coord setTop(){
+        int x=dots.get(0).x;
+        int y=dots.get(0).y;
+        for (Coord coord: dots){
+            if (x>coord.x){
+                x=coord.x;
+            }
+            if (y>coord.y){
+                y=coord.y;
+            }
+        }
+        return new Coord(x,y);
     }
+
+    private Coord setBottom(){
+        int x=dots.get(0).x;
+        int y=dots.get(0).y;
+        for (Coord coord: dots){
+            if (x<coord.x){
+                x=coord.x;
+            }
+            if (y<coord.y){
+                y=coord.y;
+            }
+        }
+        return new Coord(x,y);
+    }
+
+
+    public  static Figure getRandom() {
+        return Figure.values()[(int)(Math.random()*Figure.values().length)];
+    }
+
+
 
 }
